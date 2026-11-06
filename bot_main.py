@@ -189,9 +189,13 @@ async def handle_new_tasks(request: web.Request):
         return web.json_response({"ok": False, "error": "Неверный пароль API_SECRET"}, status=403)
 
     try:
+        # Проверяем, что запрос действительно содержит JSON
+        if not request.can_read_body:
+            return web.json_response({"ok": False, "error": "Пустое тело запроса"}, status=400)
         data = await request.json()
-    except Exception:
-        return web.json_response({"ok": False, "error": "Некорректный JSON"}, status=400)
+    except Exception as e:
+        logging.error(f"Ошибка парсинга JSON от расширения: {e}")
+        return web.json_response({"ok": False, "error": f"Некорректный JSON: {str(e)}"}, status=400)
 
     tasks = data.get("tasks", [])
     req_chat_id = data.get("chat_id")
@@ -263,7 +267,6 @@ async def handle_new_tasks(request: web.Request):
             logging.error(f"Ошибка отправки сводки в TG: {e}")
 
     return web.json_response({"ok": True, "scheduled_count": len(scheduled_info)})
-
 
 # --- КОМАНДЫ БОТА ---
 @dp.message(Command("start"))
